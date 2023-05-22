@@ -1,4 +1,5 @@
-import { Component } from 'react';
+// import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import Notiflix from 'notiflix';
 
 import Searchbar from './Searchbar';
@@ -10,84 +11,74 @@ import Modal from './Modal';
 import Api from '../servises/api';
 
 import css from './App.module.css';
-export class App extends Component {
-  state = {
-    images: [],
-    search: '',
-    page: 1,
-    isLoading: false,
-    error: true,
+export function App() {
+  const [images, setImages] = useState([]);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(true);
 
-    largeImg: { img: '', alt: '' },
-    isShowModal: false,
+  const [largeImg, setLargeImg] = useState({ img: '', alt: '' });
+  const [isShowModal, setIsShowModal] = useState(false);
+  const incrementPage = () => {
+    setPage(Number([page]) + 1);
   };
-  incrementPage = () => {
-    const { page } = this.state;
-    this.setState({ page: Number([page]) + 1 });
+  const onSubmit = async data => {
+    setImages([]);
+    setSearch(data);
+    setPage(1);
   };
-  onSubmit = async data => {
-    this.setState({ images: [], search: data, page: 1 });
+  const addLargeImg = (img, tags) => {
+    setLargeImg({ img, tags });
   };
-  addLargeImg = (img, tags) => {
-    this.setState({ largeImg: { img: img, tags: tags } });
+  const showModal = () => {
+    setIsShowModal(true);
   };
-  showModal = () => {
-    this.setState({ isShowModal: true });
-  };
-  hideModal = () => {
-    this.setState({ isShowModal: false });
+  const hideModal = () => {
+    setIsShowModal(false);
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      this.state.search !== prevState.search ||
-      this.state.page !== prevState.page
-    ) {
-      this.setState({ isLoading: true });
-      const { search } = this.state.search;
+  useEffect(() => {
+    async function fetchData() {
+      const api = await Api(search, page);
       try {
-        this.setState({ error: true });
-        const api = await Api(search, this.state.page);
         if (api.length === 0) {
-          this.setState({ error: false });
+          setError(false);
           Notiflix.Notify.failure('Nothing was found for your request');
           return;
         }
-        this.setState(prevState => ({
-          images: [...prevState.images, { images: api }],
-        }));
+        setImages(prevState => [...prevState, { images: api }]);
       } catch (err) {
         console.log(err);
       } finally {
-        this.setState({ isLoading: false });
+        setIsLoading(false);
       }
     }
-  }
-  componentWillUnmount() {}
-  render() {
-    const { isLoading, images, isShowModal, largeImg } = this.state;
-    return (
-      <div className={css.app}>
-        <Searchbar onSubmit={this.onSubmit} isSubmiting={isLoading} />
-        <ImageGallery>
-          <ImageGalleryItem
-            cards={images}
-            showModal={this.showModal}
-            addLargeI={this.addLargeImg}
-          />
-        </ImageGallery>
-        <Loader loading={isLoading} />
-        {this.state.error && (
-          <Button props={this.state} incrementPage={this.incrementPage} />
-        )}
-        {isShowModal && (
-          <Modal
-            largeImg={largeImg}
-            isShowModal={this.state.isShowModal}
-            hideModal={this.hideModal}
-          />
-        )}
-      </div>
-    );
-  }
+    if (search !== '') {
+      setIsLoading(true);
+
+      fetchData();
+    }
+  }, [search, page]);
+  return (
+    <div className={css.app}>
+      <Searchbar onSubmit={onSubmit} isSubmiting={isLoading} />
+      <ImageGallery>
+        <ImageGalleryItem
+          cards={images}
+          showModal={showModal}
+          addLargeI={addLargeImg}
+        />
+      </ImageGallery>
+      <Loader loading={isLoading} />
+      {error && <Button images={images} incrementPage={incrementPage} />}
+      {isShowModal && (
+        <Modal
+          largeImg={largeImg}
+          isShowModal={isShowModal}
+          hideModal={hideModal}
+        />
+      )}
+    </div>
+  );
 }
