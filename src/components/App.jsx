@@ -55,6 +55,7 @@ export function App() {
       }
     }
     if (search !== '') {
+      setError(true);
       setIsLoading(true);
 
       fetchData();
